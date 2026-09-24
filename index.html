@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens — Simplified Verification Portal</title>
+
+    <script>
+        (function () {
+            const theme = localStorage.getItem('truthlens-theme') === 'light' ? 'light' : 'dark';
+            document.documentElement.classList.remove('dark', 'light');
+            document.documentElement.classList.add(theme);
+        })();
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pitch: '#000000',
+                        noir: '#0a0a0a',
+                        borderLight: 'rgba(255, 255, 255, 0.15)',
+                    },
+                    fontFamily: {
+                        serif: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg: #000000;
+            --fg: #ffffff;
+            --muted: #a3a3a3;
+            --panel: #0a0a0a;
+            --border: rgba(255, 255, 255, 0.15);
+            --grid: rgba(255, 255, 255, 0.025);
+            --line: rgba(255, 255, 255, 0.18);
+            --glow: rgba(255, 255, 255, 0.7);
+        }
+
+        html.light {
+            --bg: #ffffff;
+            --fg: #000000;
+            --muted: #404040;
+            --panel: #f7f7f7;
+            --border: rgba(0, 0, 0, 0.18);
+            --grid: rgba(0, 0, 0, 0.06);
+            --line: rgba(0, 0, 0, 0.16);
+            --glow: rgba(0, 0, 0, 0.35);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .grid-bg {
+            background-size: 32px 32px;
+            background-image:
+                linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+        }
+
+        .white-glow {
+            filter: drop-shadow(0px 0px 6px var(--glow)) drop-shadow(0px 0px 18px var(--glow));
+        }
+
+        textarea::-webkit-scrollbar { width: 4px; }
+        textarea::-webkit-scrollbar-track { background: var(--panel); }
+        textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+
+        .spectacle-draw {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawOutline 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes drawOutline {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .scanning-reticle {
+            transform-origin: center;
+            animation: reticleSpin 4s linear infinite;
+        }
+
+        @keyframes reticleSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hud-input {
+            width: 100%;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            resize: none;
+            transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+        .hud-input::placeholder { color: #737373; }
+        html.light .hud-input::placeholder { color: #737373; }
+        .hud-input:hover { border-color: var(--fg); }
+        .hud-input:focus {
+            outline: none;
+            border-color: var(--fg);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 40%, transparent);
+        }
+
+        .btn-hud {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.15s;
+            cursor: pointer;
+        }
+        .btn-hud:hover { border-color: var(--fg); }
+        .btn-hud:focus-visible {
+            outline: 2px solid var(--fg);
+            outline-offset: 2px;
+        }
+        .btn-hud:active:not(:disabled) { transform: scale(0.97); }
+        .btn-hud:disabled,
+        .btn-hud[aria-busy="true"] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            padding: 0.5rem 1rem;
+        }
+        .btn-ghost:hover { color: var(--fg); }
+
+        .btn-solid {
+            background: var(--fg);
+            color: var(--bg);
+            border-color: var(--fg);
+            padding: 0.875rem 1.5rem;
+            width: 100%;
+            font-weight: 600;
+            box-shadow: 0 0 20px color-mix(in srgb, var(--fg) 18%, transparent);
+        }
+        .btn-solid:hover { filter: brightness(0.92); }
+
+        .drop-zone {
+            border: 1px dashed var(--border);
+            border-radius: 0.75rem;
+            background: var(--panel);
+            min-height: 5.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .drop-zone:hover,
+        .drop-zone.is-drag {
+            border-color: var(--fg);
+            background: color-mix(in srgb, var(--fg) 4%, var(--panel));
+        }
+        .drop-zone:focus-visible {
+            outline: 2px solid var(--fg);
+            outline-offset: 2px;
+        }
+
+        .file-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.25rem 0.35rem 0.25rem 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            max-width: 100%;
+        }
+
+        .spinner {
+            width: 0.9rem;
+            height: 0.9rem;
+            border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+            border-top-color: currentColor;
+            border-radius: 999px;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+        .btn-hud[aria-busy="true"] .spinner { display: inline-block; }
+        .btn-hud[aria-busy="true"] .btn-arrow { display: none; }
+
+        #toast-stack {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 80;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: min(24rem, calc(100vw - 2rem));
+        }
+        .toast {
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--fg);
+            padding: 0.75rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-neutral-800 selection:text-white relative overflow-x-hidden">
+
+    <div id="toast-stack" aria-live="polite"></div>
+
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <canvas id="liquid-lines" class="absolute inset-0 w-full h-full"></canvas>
+    </div>
+    <div class="fixed inset-0 grid-bg pointer-events-none z-[1]"></div>
+
+    <header class="relative z-20 border-b px-6 lg:px-16 py-5 flex items-center justify-between backdrop-blur-md" style="border-color: var(--border); background: color-mix(in srgb, var(--bg) 82%, transparent);">
+        <a href="#" class="flex items-center gap-3 group">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300" style="border: 1px solid var(--border);">
+                <svg width="20" height="10" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="stroke: var(--fg);">
+                    <circle cx="6" cy="6" r="5" stroke-width="1.5"/>
+                    <circle cx="18" cy="6" r="5" stroke-width="1.5"/>
+                    <path d="M11 5C12 4 12 4 13 5" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <span class="font-serif tracking-[0.2em] text-lg font-medium" style="color: var(--fg);">TRUTHLENS</span>
+        </a>
+
+        <div class="flex items-center gap-3 sm:gap-6">
+            <span class="hidden sm:inline-flex items-center gap-2 font-mono text-[11px]" style="color: var(--muted);">
+                <span id="system-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="system-status-text">SYSTEM READY</span>
+            </span>
+            <button type="button" id="theme-toggle" class="btn-hud btn-ghost" aria-label="Toggle light and dark theme" title="Toggle theme">
+                <span class="spinner" aria-hidden="true"></span>
+                <span id="theme-toggle-label">Light</span>
+            </button>
+            <button type="button" id="reset-btn" class="btn-hud btn-ghost" aria-label="Reset all fields">
+                <span class="spinner" aria-hidden="true"></span>
+                Reset Fields
+            </button>
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-1 flex items-start justify-center px-6 lg:px-16 py-12">
+        <div class="max-w-7xl w-full space-y-16">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+            
+            <div class="lg:col-span-6 flex flex-col justify-center space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full w-fit" style="border: 1px solid var(--border);">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background: var(--fg);"></span>
+                    <span class="font-mono text-[10px] tracking-widest uppercase" style="color: var(--muted);">2D OPTICAL VERIFICATION ENGINE</span>
+                </div>
+
+                <div>
+                    <h1 class="font-serif text-3xl sm:text-5xl font-normal tracking-tight leading-tight" style="color: var(--fg);">
+                        Clear Distortion. <br/>
+                        <span class="italic font-light" style="color: var(--muted);">Isolate Pure Facts.</span>
+                    </h1>
+                    <p class="text-xs sm:text-sm font-light leading-relaxed mt-2 max-w-lg" style="color: var(--muted);">
+                        Paste a claim, attach a source PDF/DOCX, then scan. Summaries stay locked to the uploaded document.
+                    </p>
+                </div>
+
+                <form id="verification-form" class="space-y-4 pt-2">
+                    <div class="space-y-1.5">
+                        <label for="textbox-1" class="flex justify-between items-center font-mono text-[11px] uppercase tracking-wider" style="color: var(--muted);">
+                            <span>01 / Primary Claim or Statement</span>
+                            <span id="count-box1" class="text-[9px] font-mono">0 CHARS</span>
+                        </label>
+                        <div class="relative">
+                            <textarea id="textbox-1" name="claim" rows="3" required oninput="updateCharCount()" placeholder="Paste primary text, news headline, or article excerpt..." class="hud-input"></textarea>
+                            <div class="absolute bottom-2.5 right-3 font-mono text-[9px] pointer-events-none" style="color: #737373;">BOX_A</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="textbox-2" class="flex justify-between items-center font-mono text-[11px] uppercase tracking-wider" style="color: var(--muted);">
+                            <span>02 / Reference Source or URL</span>
+                            <span id="count-box2" class="text-[9px] font-mono">OPTIONAL</span>
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-2">
+                            <div class="relative">
+                                <textarea id="textbox-2" name="reference_text" rows="3" oninput="updateCharCount()" placeholder="Paste secondary source text, reference link, or benchmark context..." class="hud-input"></textarea>
+                                <div class="absolute bottom-2.5 right-3 font-mono text-[9px] pointer-events-none" style="color: #737373;">BOX_B</div>
+                            </div>
+                            <div class="drop-zone" id="ref-drop" tabindex="0" role="button" aria-label="Attach reference PDF or DOCX">
+                                <input id="ref-file" name="reference_file" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="sr-only">
+                                <span class="font-mono text-[10px] tracking-widest uppercase">Drop PDF/DOCX</span>
+                                <span class="font-mono text-[9px]" style="color: var(--muted);">or click to attach</span>
+                            </div>
+                        </div>
+                        <div id="ref-file-pill" class="hidden">
+                            <span class="file-pill">
+                                <span id="ref-file-name">📄 file.pdf</span>
+                                <button type="button" id="ref-file-remove" class="btn-hud btn-ghost !px-2 !py-1 !rounded-full" aria-label="Remove reference file">[X]</button>
+                            </span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="btn-hud btn-solid">
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span id="btn-text">Run Verification Scan</span>
+                        <svg class="btn-arrow w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24">
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-6 flex items-center justify-center">
+                <div class="relative w-full aspect-[4/3] max-w-lg rounded-2xl p-8 flex flex-col justify-between overflow-hidden shadow-2xl" style="background: var(--bg); border: 1px solid var(--border);">
+                    <div class="flex items-center justify-between font-mono text-[9px] uppercase tracking-widest z-10" style="color: var(--muted);">
+                        <span>// OPTICAL_VIEWPORT</span>
+                        <span id="hud-status" style="color: var(--fg);">STATUS: IDLE</span>
+                    </div>
+
+                    <div class="absolute inset-0 grid-bg opacity-30 pointer-events-none"></div>
+                    <div id="laser-line" class="absolute inset-x-0 h-0.5 z-20 pointer-events-none transition-all duration-700 opacity-0 top-0" style="background: var(--fg); box-shadow: 0 0 12px var(--fg);"></div>
+
+                    <div class="relative z-10 my-auto flex items-center justify-center py-4 select-none">
+                        <svg id="spectacle-svg" class="w-full max-w-sm h-auto filter white-glow transition-transform duration-300 hover:scale-[1.02]" viewBox="0 0 500 220" fill="none" xmlns="http://www.w3.org/2000/svg" style="stroke: var(--fg);">
+                            <path class="spectacle-draw" d="M 15 80 L 75 75" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                            <path class="spectacle-draw" d="M 485 80 L 425 75" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                            <path class="spectacle-draw" d="M 105 70 C 135 65, 205 65, 225 70 C 240 95, 235 155, 215 180 C 190 205, 130 205, 105 180 C 85 155, 85 95, 105 70 Z" stroke="currentColor" stroke-width="3.5" fill="none"/>
+                            <path class="spectacle-draw" d="M 275 70 C 295 65, 365 65, 395 70 C 415 95, 415 155, 395 180 C 370 205, 310 205, 285 180 C 265 155, 260 95, 275 70 Z" stroke="currentColor" stroke-width="3.5" fill="none"/>
+                            <path class="spectacle-draw" d="M 223 78 C 235 72, 265 72, 277 78" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                            <path class="spectacle-draw" d="M 225 94 C 240 86, 260 86, 275 94" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M 220 110 C 218 120, 222 130, 225 135" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M 280 110 C 282 120, 278 130, 275 135" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <g id="lens-crosshairs" class="opacity-60 transition-opacity duration-300">
+                                <g id="reticle-left" class="style-reticle">
+                                    <circle cx="160" cy="130" r="28" stroke="currentColor" stroke-width="0.75" stroke-dasharray="3 3"/>
+                                    <line x1="160" y1="95" x2="160" y2="165" stroke="currentColor" stroke-width="0.5"/>
+                                    <line x1="125" y1="130" x2="195" y2="130" stroke="currentColor" stroke-width="0.5"/>
+                                </g>
+                                <g id="reticle-right" class="style-reticle">
+                                    <circle cx="340" cy="130" r="28" stroke="currentColor" stroke-width="0.75" stroke-dasharray="3 3"/>
+                                    <line x1="340" y1="95" x2="340" y2="165" stroke="currentColor" stroke-width="0.5"/>
+                                    <line x1="305" y1="130" x2="375" y2="130" stroke="currentColor" stroke-width="0.5"/>
+                                </g>
+                            </g>
+                        </svg>
+                    </div>
+
+                    <div id="output-card" class="relative z-10 rounded-xl p-3 flex items-center justify-between gap-3 text-xs font-mono transition-all duration-300" style="background: var(--panel); border: 1px solid var(--border);">
+                        <span id="output-text" style="color: var(--muted);">INPUT DATA INTO TEXTBOXES AND SCAN</span>
+                        <span id="output-score" class="font-semibold shrink-0" style="color: var(--fg);">FIDELITY: 100%</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <section id="summarizer" class="rounded-2xl p-6 sm:p-8 space-y-5" style="border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 70%, transparent);">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                    <div>
+                        <p class="font-mono text-[11px] uppercase tracking-wider" style="color: var(--muted);">03 / Standalone Document Summarizer</p>
+                        <h2 class="font-serif text-2xl sm:text-3xl mt-1">Isolated Source Digest</h2>
+                        <p class="text-xs mt-1 max-w-2xl" style="color: var(--muted);">
+                            Summary is generated strictly from the attached file or pasted text. Outside knowledge is ignored.
+                        </p>
+                    </div>
+                </div>
+
+                <form id="summarize-form" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-7 space-y-2">
+                        <label for="summary-text" class="font-mono text-[11px] uppercase tracking-wider" style="color: var(--muted);">Optional source text</label>
+                        <textarea id="summary-text" name="text" rows="6" class="hud-input" placeholder="Paste document text to summarize in isolation..."></textarea>
+                    </div>
+                    <div class="lg:col-span-5 space-y-2">
+                        <span class="font-mono text-[11px] uppercase tracking-wider" style="color: var(--muted);">PDF / DOCX upload</span>
+                        <div class="drop-zone min-h-[10.5rem]" id="sum-drop" tabindex="0" role="button" aria-label="Attach summarizer PDF or DOCX">
+                            <input id="sum-file" name="file" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="sr-only">
+                            <span class="font-mono text-[10px] tracking-widest uppercase">Drop isolated document</span>
+                            <span class="font-mono text-[9px]" style="color: var(--muted);">PDF or DOCX only</span>
+                        </div>
+                        <div id="sum-file-pill" class="hidden">
+                            <span class="file-pill">
+                                <span id="sum-file-name">📄 file.pdf</span>
+                                <button type="button" id="sum-file-remove" class="btn-hud btn-ghost !px-2 !py-1 !rounded-full" aria-label="Remove summarizer file">[X]</button>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-12">
+                        <button type="submit" id="summarize-btn" class="btn-hud btn-solid max-w-md">
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span id="summarize-btn-text">Generate Isolated Summary</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="summary-hud" class="rounded-xl p-4 space-y-3" style="border: 1px solid var(--border); background: var(--panel);">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="font-mono text-[10px] uppercase tracking-widest" style="color: var(--muted);">// ISOLATED_SUMMARY</span>
+                        <button type="button" id="copy-summary-btn" class="btn-hud btn-ghost !px-3 !py-1" aria-label="Copy summary to clipboard">
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span id="copy-summary-label">Copy</span>
+                        </button>
+                    </div>
+                    <p id="summary-output" class="text-sm leading-relaxed whitespace-pre-wrap">Attach a document or paste source text, then generate an isolated summary.</p>
+                    <ul id="summary-takeaways" class="font-mono text-[11px] space-y-1" style="color: var(--muted);"></ul>
+                    <p id="summary-meta" class="font-mono text-[10px] uppercase tracking-wider" style="color: var(--muted);"></p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="relative z-20 border-t px-6 lg:px-16 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono" style="border-color: var(--border); background: var(--bg); color: var(--muted);">
+        <div>TRUTHLENS VERIFICATION ENGINE © 2026</div>
+        <div class="flex gap-6">
+            <a href="#" class="hover:opacity-100 opacity-80 transition-opacity" style="color: inherit;">PRIVACY</a>
+            <a href="#" class="hover:opacity-100 opacity-80 transition-opacity" style="color: inherit;">OPTICS LOGIC</a>
+            <a href="#" class="hover:opacity-100 opacity-80 transition-opacity" style="color: inherit;">DOCUMENTATION</a>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let currentScanInterval = null;
+        let liquidLineColor = 'rgba(255, 255, 255, 0.18)';
+
+        (function initLiquidLines() {
+            const canvas = document.getElementById('liquid-lines');
+            if (!(canvas instanceof HTMLCanvasElement)) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            const lineCount = 8;
+            const speed = 0.006;
+            const amplitudeMultiplier = 1.0;
+            let step = 0;
+
+            const resizeCanvas = () => {
+                const parent = canvas.parentElement;
+                if (!parent) return;
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            };
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            const draw = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                step += speed;
+                for (let i = 0; i < lineCount; i++) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = liquidLineColor;
+                    ctx.lineWidth = 1.5;
+                    const verticalOffset = (canvas.height / (lineCount + 1)) * (i + 1);
+                    const freq = 0.002 + i * 0.0004;
+                    const amp = (25 + i * 12) * amplitudeMultiplier;
+                    ctx.moveTo(0, verticalOffset);
+                    for (let x = 0; x <= canvas.width; x += 4) {
+                        const wave1 = Math.sin(x * freq + step + i * 0.5) * amp;
+                        const wave2 = Math.cos(x * 0.0015 - step * 0.7) * (amp * 0.4);
+                        ctx.lineTo(x, verticalOffset + wave1 + wave2);
+                    }
+                    ctx.stroke();
+                }
+                requestAnimationFrame(draw);
+            };
+            draw();
+        })();
+
+        function currentTheme() {
+            return document.documentElement.classList.contains('light') ? 'light' : 'dark';
+        }
+
+        function applyTheme(theme) {
+            const next = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.classList.remove('dark', 'light');
+            document.documentElement.classList.add(next);
+            localStorage.setItem('truthlens-theme', next);
+            liquidLineColor = next === 'light' ? 'rgba(0, 0, 0, 0.16)' : 'rgba(255, 255, 255, 0.18)';
+            const label = document.getElementById('theme-toggle-label');
+            if (label) label.textContent = next === 'light' ? 'Dark' : 'Light';
+            document.getElementById('theme-toggle')?.setAttribute('aria-pressed', String(next === 'light'));
+        }
+
+        applyTheme(currentTheme());
+
+        function playBeep(freq = 800, type = 'sine') {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.04, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.12);
+            } catch (e) {}
+        }
+
+        function showAlert(message) {
+            const stack = document.getElementById('toast-stack');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            stack.appendChild(toast);
+            setTimeout(() => toast.remove(), 5200);
+        }
+
+        function setBusy(button, busy, labelId, idleText, busyText) {
+            if (!button) return;
+            button.disabled = busy;
+            button.setAttribute('aria-busy', busy ? 'true' : 'false');
+            if (labelId && busyText) {
+                const el = document.getElementById(labelId);
+                if (el) el.textContent = busy ? busyText : idleText;
+            }
+        }
+
+        function updateCharCount() {
+            const t1 = document.getElementById('textbox-1').value.length;
+            const t2 = document.getElementById('textbox-2').value.length;
+            document.getElementById('count-box1').innerText = `${t1} CHARS`;
+            document.getElementById('count-box2').innerText = t2 > 0 ? `${t2} CHARS` : 'OPTIONAL';
+        }
+
+        function bindDropZone(zoneId, inputId, pillId, nameId) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            const pill = document.getElementById(pillId);
+            const nameEl = document.getElementById(nameId);
+
+            const render = () => {
+                const file = input.files && input.files[0];
+                if (file) {
+                    pill.classList.remove('hidden');
+                    nameEl.textContent = `📄 ${file.name}`;
+                } else {
+                    pill.classList.add('hidden');
+                    nameEl.textContent = '';
+                }
+            };
+
+            const acceptFile = (file) => {
+                if (!file) return;
+                const ok = /\.(pdf|docx)$/i.test(file.name);
+                if (!ok) {
+                    showAlert('Only PDF and DOCX files are accepted.');
+                    input.value = '';
+                    render();
+                    return;
+                }
+                const transfer = new DataTransfer();
+                transfer.items.add(file);
+                input.files = transfer.files;
+                render();
+            };
+
+            zone.addEventListener('click', () => input.click());
+            zone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    input.click();
+                }
+            });
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('is-drag');
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('is-drag'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('is-drag');
+                acceptFile(e.dataTransfer.files[0]);
+            });
+            input.addEventListener('change', render);
+            render();
+            return { input, render };
+        }
+
+        const refDrop = bindDropZone('ref-drop', 'ref-file', 'ref-file-pill', 'ref-file-name');
+        const sumDrop = bindDropZone('sum-drop', 'sum-file', 'sum-file-pill', 'sum-file-name');
+
+        document.getElementById('ref-file-remove').addEventListener('click', () => {
+            refDrop.input.value = '';
+            refDrop.render();
+        });
+        document.getElementById('sum-file-remove').addEventListener('click', () => {
+            sumDrop.input.value = '';
+            sumDrop.render();
+        });
+
+        function errorDetail(payload, fallback) {
+            if (!payload) return fallback;
+            if (typeof payload.detail === 'string') return payload.detail;
+            if (Array.isArray(payload.detail)) {
+                return payload.detail.map((d) => d.msg || JSON.stringify(d)).join('; ');
+            }
+            return fallback;
+        }
+
+        function mockVerify(claim, hasRef) {
+            const score = Number((0.72 + (claim.length % 7) / 40).toFixed(4));
+            return {
+                verdict: hasRef ? 'ENTAILMENT' : 'NEUTRAL',
+                confidence_score: score,
+                summary: hasRef
+                    ? 'Mock optics: claim compared against local reference (backend unreachable).'
+                    : 'Mock optics: no reference source; treated as unsupported.',
+                key_factors: ['Backend unreachable', 'Using fallback mock payload'],
+                _mock: true,
+            };
+        }
+
+        function mockSummarize(filename) {
+            return {
+                summary_text: 'Mock isolated summary (backend unreachable). No external facts were added.',
+                word_count: 12,
+                key_takeaways: ['Source-locked digest only', 'Reconnect FastAPI on port 8000'],
+                source_filename: filename || null,
+                _mock: true,
+            };
+        }
+
+        async function postForm(path, formData, mockFactory) {
+            try {
+                const res = await fetch(`${API_BASE}${path}`, { method: 'POST', body: formData });
+                const payload = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(errorDetail(payload, `HTTP ${res.status}`));
+                }
+                return payload;
+            } catch (err) {
+                const msg = String(err && err.message ? err.message : err);
+                const unreachable = /failed to fetch|networkerror|load failed/i.test(msg);
+                if (unreachable) {
+                    showAlert('Backend unreachable — using mock optics data.');
+                    return mockFactory();
+                }
+                throw err;
+            }
+        }
+
+        function animateLaser(onDone) {
+            const laserLine = document.getElementById('laser-line');
+            laserLine.style.opacity = '1';
+            laserLine.style.top = '0%';
+            let position = 0;
+            if (currentScanInterval) clearInterval(currentScanInterval);
+            currentScanInterval = setInterval(() => {
+                position += 3.2;
+                laserLine.style.top = Math.min(position, 100) + '%';
+                if (position >= 100) {
+                    clearInterval(currentScanInterval);
+                    currentScanInterval = null;
+                    laserLine.style.opacity = '0';
+                    onDone();
+                }
+            }, 16);
+        }
+
+        function setScanChrome(scanning) {
+            const hudStatus = document.getElementById('hud-status');
+            const systemStatus = document.getElementById('system-status-text');
+            const systemIndicator = document.getElementById('system-indicator');
+            const crosshairs = document.getElementById('lens-crosshairs');
+            if (scanning) {
+                hudStatus.innerText = 'STATUS: SCANNING';
+                hudStatus.className = 'text-amber-400 font-semibold';
+                systemStatus.innerText = 'PROCESSING';
+                systemIndicator.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+                crosshairs.classList.add('scanning-reticle', 'opacity-100');
+                crosshairs.classList.remove('opacity-60');
+            } else {
+                systemStatus.innerText = 'SYSTEM READY';
+                systemIndicator.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                crosshairs.classList.remove('scanning-reticle');
+                crosshairs.classList.add('opacity-60');
+            }
+        }
+
+        function paintVerdict(data) {
+            const hudStatus = document.getElementById('hud-status');
+            const outputText = document.getElementById('output-text');
+            const outputScore = document.getElementById('output-score');
+            const verdict = String(data.verdict || 'UNKNOWN').toUpperCase();
+            const pct = Math.round(Number(data.confidence_score || 0) * 1000) / 10;
+            const tone = verdict === 'ENTAILMENT'
+                ? 'text-emerald-500 font-semibold'
+                : verdict === 'CONTRADICTION'
+                    ? 'text-red-500 font-semibold'
+                    : 'text-amber-500 font-semibold';
+            hudStatus.innerText = `STATUS: ${verdict}`;
+            hudStatus.className = tone;
+            outputText.innerText = data.summary || verdict;
+            outputText.className = tone;
+            outputScore.innerText = `CONFIDENCE: ${pct}%`;
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            playBeep(640, 'triangle');
+            applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            const btn = document.getElementById('reset-btn');
+            setBusy(btn, true);
+            if (currentScanInterval) clearInterval(currentScanInterval);
+            playBeep(500, 'triangle');
+            document.getElementById('verification-form').reset();
+            document.getElementById('summarize-form').reset();
+            refDrop.input.value = '';
+            sumDrop.input.value = '';
+            refDrop.render();
+            sumDrop.render();
+            updateCharCount();
+            document.getElementById('laser-line').style.opacity = '0';
+            document.getElementById('hud-status').innerText = 'STATUS: IDLE';
+            document.getElementById('hud-status').className = '';
+            document.getElementById('hud-status').style.color = 'var(--fg)';
+            document.getElementById('output-text').innerText = 'INPUT DATA INTO TEXTBOXES AND SCAN';
+            document.getElementById('output-text').className = '';
+            document.getElementById('output-text').style.color = 'var(--muted)';
+            document.getElementById('output-score').innerText = 'FIDELITY: 100%';
+            document.getElementById('summary-output').innerText = 'Attach a document or paste source text, then generate an isolated summary.';
+            document.getElementById('summary-takeaways').innerHTML = '';
+            document.getElementById('summary-meta').innerText = '';
+            setScanChrome(false);
+            setBusy(document.getElementById('submit-btn'), false, 'btn-text', 'Run Verification Scan', 'Run Verification Scan');
+            setBusy(document.getElementById('summarize-btn'), false, 'summarize-btn-text', 'Generate Isolated Summary', 'Generate Isolated Summary');
+            setTimeout(() => setBusy(btn, false), 180);
+        });
+
+        document.getElementById('verification-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const claim = document.getElementById('textbox-1').value.trim();
+            const referenceText = document.getElementById('textbox-2').value.trim();
+            const refFile = refDrop.input.files && refDrop.input.files[0];
+            const submitBtn = document.getElementById('submit-btn');
+            if (!claim) {
+                showAlert('Primary claim is required.');
+                return;
+            }
+
+            playBeep(900, 'square');
+            setBusy(submitBtn, true, 'btn-text', 'Run Verification Scan', 'Processing Spectacle Optics...');
+            setScanChrome(true);
+
+            const formData = new FormData();
+            formData.append('claim', claim);
+            if (referenceText) formData.append('reference_text', referenceText);
+            if (refFile) formData.append('reference_file', refFile);
+
+            let result;
+            const fetchPromise = postForm('/verify', formData, () => mockVerify(claim, Boolean(referenceText || refFile)));
+            const laserPromise = new Promise((resolve) => animateLaser(resolve));
+
+            try {
+                const settled = await Promise.allSettled([fetchPromise, laserPromise]);
+                if (settled[0].status === 'rejected') throw settled[0].reason;
+                result = settled[0].value;
+                paintVerdict(result);
+                if (result._mock) {
+                    document.getElementById('hud-status').innerText = 'STATUS: MOCK';
+                }
+                playBeep(1200, 'sine');
+            } catch (err) {
+                showAlert(err.message || 'Verification failed.');
+                document.getElementById('hud-status').innerText = 'STATUS: ERROR';
+                document.getElementById('hud-status').className = 'text-red-500 font-semibold';
+                document.getElementById('output-text').innerText = err.message || 'SCAN FAILED';
+                document.getElementById('output-text').className = 'text-red-500 font-semibold';
+                playBeep(220, 'sawtooth');
+            } finally {
+                setScanChrome(false);
+                setBusy(submitBtn, false, 'btn-text', 'Run Verification Scan', 'Run Verification Scan');
+            }
+        });
+
+        document.getElementById('summarize-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const text = document.getElementById('summary-text').value.trim();
+            const file = sumDrop.input.files && sumDrop.input.files[0];
+            const btn = document.getElementById('summarize-btn');
+            if (!text && !file) {
+                showAlert('Provide isolated text and/or a PDF/DOCX file.');
+                return;
+            }
+
+            playBeep(780, 'square');
+            setBusy(btn, true, 'summarize-btn-text', 'Generate Isolated Summary', 'Isolating Source...');
+
+            const formData = new FormData();
+            if (text) formData.append('text', text);
+            if (file) formData.append('file', file);
+
+            try {
+                const data = await postForm('/summarize', formData, () => mockSummarize(file && file.name));
+                document.getElementById('summary-output').textContent = data.summary_text || '';
+                const takes = Array.isArray(data.key_takeaways) ? data.key_takeaways : [];
+                document.getElementById('summary-takeaways').innerHTML = takes
+                    .map((item) => `<li>— ${String(item)}</li>`)
+                    .join('');
+                const fname = data.source_filename ? `SOURCE: ${data.source_filename}` : 'SOURCE: PASTED TEXT';
+                document.getElementById('summary-meta').textContent = `${fname}  ·  ${data.word_count || 0} WORDS`;
+                if (data._mock) showAlert('Summary is mock data; start uvicorn on port 8000 for live isolation.');
+                playBeep(1100, 'sine');
+            } catch (err) {
+                showAlert(err.message || 'Summarization failed.');
+                document.getElementById('summary-output').textContent = err.message || 'Summary failed.';
+            } finally {
+                setBusy(btn, false, 'summarize-btn-text', 'Generate Isolated Summary', 'Generate Isolated Summary');
+            }
+        });
+
+        document.getElementById('copy-summary-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('copy-summary-btn');
+            const text = document.getElementById('summary-output').innerText;
+            setBusy(btn, true, 'copy-summary-label', 'Copy', 'Copying...');
+            try {
+                await navigator.clipboard.writeText(text);
+                document.getElementById('copy-summary-label').textContent = 'Copied';
+                playBeep(1400, 'sine');
+            } catch (err) {
+                showAlert('Clipboard permission denied.');
+            } finally {
+                setTimeout(() => {
+                    setBusy(btn, false, 'copy-summary-label', 'Copy', 'Copy');
+                }, 700);
+            }
+        });
+    </script>
+</body>
+</html>

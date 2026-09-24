@@ -1,0 +1,87 @@
+{
+  "accuracy": 0.71,
+  "macro_f1": 0.5915,
+  "report": "               precision    recall  f1-score   support\n\nContradiction     0.7763    0.8551    0.8138        69\n      Neutral     0.3571    0.2500    0.2941        20\n   Entailment     0.7000    0.6364    0.6667        11\n\n     accuracy                         0.7100       100\n    macro avg     0.6112    0.5805    0.5915       100\n weighted avg     0.6841    0.7100    0.6937       100\n",
+  "confusion_matrix": [
+    [
+      59,
+      7,
+      3
+    ],
+    [
+      15,
+      5,
+      0
+    ],
+    [
+      2,
+      2,
+      7
+    ]
+  ],
+  "num_samples": 100,
+  "num_errors": 29,
+  "sample_errors": [
+    {
+      "sentence": "the fbi has filed a lawsuit against the fbi over the killing of a man in the us state of pennsylvania.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a judge in arkansas has refused to apologise to the family of an american couple shot dead in the us.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "one of the uk\\'s biggest commercial ships has been given the go-ahead by the ministry of defence (mod).",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "bids for a new royal navy aircraft have been submitted to the public for the first time in the uk.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "australian prime minister tony abbott has called for a ban on migrants entering the mediterranean sea.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "the leader of birmingham city council has been elected as the city\\'s new leader.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a birmingham councillor has been appointed as the leader of the city council.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a crime thriller about female crime writer hilary manski has won a prestigious award for fiction.",
+      "gold": "Contradiction",
+      "pred": "Neutral",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "britain\\'s jessica ennis-hill-hill says she will not compete at the world athletics championships because she faces a doping ban.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "rory mcilroy will take a one-shot lead into the final round of the wgc-hsbc champions after carding a three-under",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    }
+  ],
+  "elapsed_seconds": 486.94
+}

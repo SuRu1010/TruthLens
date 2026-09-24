@@ -1,0 +1,87 @@
+{
+  "accuracy": 0.71,
+  "macro_f1": 0.6133,
+  "report": "               precision    recall  f1-score   support\n\nContradiction     0.8028    0.8261    0.8143        69\n      Neutral     0.3684    0.3500    0.3590        20\n   Entailment     0.7000    0.6364    0.6667        11\n\n     accuracy                         0.7100       100\n    macro avg     0.6237    0.6042    0.6133       100\n weighted avg     0.7046    0.7100    0.7070       100\n",
+  "confusion_matrix": [
+    [
+      57,
+      9,
+      3
+    ],
+    [
+      13,
+      7,
+      0
+    ],
+    [
+      1,
+      3,
+      7
+    ]
+  ],
+  "num_samples": 100,
+  "num_errors": 29,
+  "sample_errors": [
+    {
+      "sentence": "the fbi has filed a lawsuit against the fbi over the killing of a man in the us state of pennsylvania.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a judge in arkansas has refused to apologise to the family of an american couple shot dead in the us.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "one of the uk\\'s biggest commercial ships has been given the go-ahead by the ministry of defence (mod).",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "bids for a new royal navy aircraft have been submitted to the public for the first time in the uk.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "the leader of birmingham city council has been elected as the city\\'s new leader.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a birmingham councillor has been appointed as the leader of the city council.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "a crime novel about a person who\\'s known as someone else has been named crime writer of the year.",
+      "gold": "Contradiction",
+      "pred": "Neutral",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "a crime thriller about female crime writer hilary manski has won a prestigious award for fiction.",
+      "gold": "Contradiction",
+      "pred": "Neutral",
+      "confidence": 0.95
+    },
+    {
+      "sentence": "britain\\'s jessica ennis-hill-hill says she will not compete at the world athletics championships because she faces a doping ban.",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 1.0
+    },
+    {
+      "sentence": "rory mcilroy will take a one-shot lead into the final round of the wgc-hsbc champions after carding a three-under",
+      "gold": "Neutral",
+      "pred": "Contradiction",
+      "confidence": 0.95
+    }
+  ],
+  "elapsed_seconds": 530.61
+}

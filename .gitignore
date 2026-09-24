@@ -1,0 +1,12 @@
+# Ignore API keys and secrets
+.env
+
+# Ignore Python dependencies and virtual environments
+__pycache__/
+venv/
+.venv/
+*.pyc
+
+# Ignore local vector database files
+chroma_db/
+lance_db/
