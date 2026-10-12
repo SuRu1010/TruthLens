@@ -1,70 +1,85 @@
-# TruthLens — AI Hallucination Detector
+🔍 TruthLens: Advanced Level 3/4 Agentic RAG & Hallucination Guardrail
 
-A sentence-level hallucination detection tool built on the **FRANK** benchmark dataset.  
-TruthLens classifies AI-generated summary sentences into three categories:
+TruthLens is an enterprise-grade, agentic Retrieval-Augmented Generation (RAG) and hallucination verification system designed to extract insights from massive documents, eliminate factual drift, and enforce strict source grounding using hybrid search, multi-intent routing, and self-correction loops.
 
-| Label | Meaning |
-|---|---|
-| **Entailment** ✅ | Factually consistent with the source |
-| **Contradiction** ❌ | Intrinsic hallucination — contradicts the source |
-| **Neutral** ⚠️ | Extrinsic hallucination — information not found in source |
+✨ Core Architecture & Features
 
-## Architecture
+Multi-Intent Agentic Router (src/agent.py): Automatically classifies user intent into GLOBAL_SUMMARY, FACT_CHECK, or SPECIFIC_QA, routing requests to specialized processing pathways.
 
-```
-Article → [Chunker] → [Retriever (TF-IDF / Embeddings)]
-                              ↓
-Summary → [Sentence Splitter] → [NLI Classifier / Heuristic]
-                              ↓
-                     Per-sentence Verdict
-```
+Hierarchical Map-Reduce Summarizer (src/hierarchical_summarizer.py): Solves token-limit bottlenecks for 50–200+ page PDFs/DOCXs using tree-based chunk synthesis (RAPTOR-inspired clustering) without truncation.
 
-## Quick Start
+Hybrid Dense + Sparse Search (src/hybrid_search.py): Combines Dense Vector Embeddings and Okapi BM25 keyword matching via Reciprocal Rank Fusion (RRF) and Cross-Encoder re-ranking.
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+HyDE Query Expansion (src/agent.py): Generates hypothetical document passages to significantly boost retrieval recall for complex questions.
 
-# Interactive mode (TF-IDF heuristic — fast, no GPU needed)
-python cli.py
+Sentence-Level Guardrail & Self-RAG (src/guardrails.py, src/corrector.py): Audits generated text sentence-by-sentence against source contexts, computing a Factual Integrity Score (0–1) and auto-correcting hallucinations.
 
-# Interactive mode with NLI model (slower, more accurate)
-python cli.py --backend nli
+🛠️ Project Structure
 
-# Evaluate on FRANK benchmark
-python -m src.evaluate --data data/human_annotations_sentence.json --split test --backend tfidf
-python -m src.evaluate --data data/human_annotations_sentence.json --split test --backend nli --limit 100
-```
-
-## Project Structure
-
-```
 TruthLens/
-├── cli.py                  # Interactive CLI / File mode
-├── requirements.txt
-├── data/
-│   └── human_annotations_sentence.json   # FRANK benchmark
+├── main.py                  # FastAPI backend server (v2 endpoints)
+├── requirements.txt         # Project dependencies including rank-bm25
+├── cli.py                   # Interactive command-line interface
+├── data/                    # Benchmark and reference datasets
 └── src/
     ├── __init__.py
-    ├── dataset.py           # FRANK loader + label aggregation
-    ├── retriever.py         # TF-IDF / Embedding retriever
-    ├── detector.py          # NLI + heuristic hallucination detector
-    └── evaluate.py          # Evaluation suite (accuracy, F1, confusion matrix)
-```
+    ├── agent.py             # Agentic Query Engine (Intent + HyDE + Self-RAG)
+    ├── hybrid_search.py     # Hybrid BM25 + Dense RRF Retriever
+    ├── hierarchical_summarizer.py # Map-Reduce tree summarizer for massive files
+    ├── guardrails.py        # Sentence-level hallucination audit & auto-correction
+    ├── documents.py         # PDF and DOCX structural parser & chunker
+    ├── vector_store.py      # In-memory parent-child vector store
+    ├── corrector.py         # Hallucination correction engine
+    ├── pipeline.py          # Core claim verification pipeline
+    └── summarizer.py        # Isolated single-pass summarizer
 
-## Dataset
 
-Uses the [FRANK Benchmark](https://github.com/artidoro/frank) — a human-annotated  
-dataset of 2,246 article–summary pairs with sentence-level factuality annotations  
-across 9 summarization models. Error taxonomy includes:
+🚀 Getting Started
 
-- **Intrinsic errors**: EntE, CircE, RelE, CorefE, LinkE, OtherE
-- **Extrinsic errors**: OutE
-- **No error**: NoE
+1. Prerequisites
 
-## Detection Backends
+Python 3.10+
 
-| Backend | Speed | Quality | GPU Required |
-|---|---|---|---|
-| `tfidf` | ⚡ Fast | Baseline | No |
-| `nli` | 🐢 Slower | High | Optional |
+A valid Groq API Key (GROQ_API_KEY) or OpenAI API Key (OPENAI_API_KEY)
+
+2. Installation
+
+Clone the repository and set up your virtual environment:
+
+git clone https://github.com/SuRu1010/TruthLens.git
+cd TruthLens
+
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+
+
+3. Environment Configuration
+
+Create a .env file in the root directory:
+
+GROQ_API_KEY=your_groq_api_key_here
+LLM_MODEL_NAME=llama-3.3-70b-versatile
+
+
+4. Running the FastAPI Server
+
+Launch the backend API server on http://localhost:8000:
+
+python main.py
+
+
+🔌 API Endpoints
+
+POST /api/query: Advanced agentic query endpoint supporting automatic intent routing, HyDE expansion, hybrid search retrieval, and self-correction.
+
+POST /api/summarize: Hierarchical map-reduce summarizer for large documents or raw text.
+
+POST /api/guardrail: Audits generated text against source grounding passages to compute a Factual Integrity Score and auto-correct unverified claims.
+
+POST /api/verify: Core claim verification endpoint (backward-compatible with v1).
+
+📄 License
+
+Distributed under the MIT License.
