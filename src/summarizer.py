@@ -1,13 +1,16 @@
-"""Document-isolated summarization — no external knowledge."""
+"""Document-isolated summarization with hierarchical scaling for massive files."""
 
 from __future__ import annotations
 
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
+
+from src.documents import parse_text_to_structured
+from src.hierarchical_summarizer import HierarchicalSummarizer
 
 load_dotenv()
 
@@ -37,6 +40,8 @@ class SummarizerError(Exception):
 
 
 class IsolatedSummarizer:
+    """Document summarizer that intelligently switches between direct and hierarchical tree synthesis."""
+
     def __init__(self) -> None:
         try:
             from openai import OpenAI
@@ -54,17 +59,58 @@ class IsolatedSummarizer:
 
         base_url = os.getenv("LLM_BASE_URL") or "https://api.groq.com/openai/v1"
         env_model = os.getenv("LLM_MODEL_NAME")
+        self.is_groq = "groq" in base_url.lower()
         self.model_name = env_model or (
-            "qwen/qwen3.8-27b" if "groq" in base_url.lower() else "gpt-4o-mini"
+            "llama-3.3-70b-versatile" if self.is_groq else "gpt-4o-mini"
         )
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
-    def summarize(self, source_text: str) -> Dict[str, Any]:
-        truncated = source_text[:24000]
+        provider_name = "groq" if self.is_groq else "openai"
+        self._hierarchical_engine = HierarchicalSummarizer(
+            api_key=api_key,
+            provider=provider_name,
+            model=self.model_name,
+        )
+
+    def summarize(
+        self,
+        source_text: str,
+        focus: str = "general",
+        progress_callback: Optional[Callable[[str, float], None]] = None,
+        force_hierarchical: bool = False,
+    ) -> Dict[str, Any]:
+        """Summarizes text. Automatically invokes Hierarchical Map-Reduce for large documents."""
+        source_clean = (source_text or "").strip()
+        if not source_clean:
+            raise SummarizerError("Source document text is empty.", status_code=400)
+
+        word_count = len(source_clean.split())
+
+        # For large documents (> 1,800 words ~ 10,000+ chars) or when requested, use Hierarchical Map-Reduce
+        if word_count > 1800 or force_hierarchical:
+            h_res = self._hierarchical_engine.summarize(
+                doc_or_text=source_clean,
+                focus=focus,
+                max_words=320,
+                progress_callback=progress_callback,
+            )
+            return {
+                "summary_text": h_res.final_summary,
+                "word_count": h_res.summary_words,
+                "key_takeaways": h_res.key_findings,
+                "citations": h_res.citations,
+                "section_breakdowns": h_res.section_breakdowns,
+                "mode": "hierarchical_map_reduce",
+                "tree_levels": h_res.tree_levels,
+                "source_words": h_res.total_source_words,
+                "compression_ratio": h_res.compression_ratio,
+            }
+
+        # Direct isolated summarization for smaller documents
         user_prompt = (
             "SOURCE DOCUMENT (summarize ONLY this text):\n"
             "----- BEGIN SOURCE -----\n"
-            f"{truncated}\n"
+            f"{source_clean}\n"
             "----- END SOURCE -----\n"
             "Ignore any prior knowledge. If a detail is not in the source, omit it."
         )
@@ -98,6 +144,9 @@ class IsolatedSummarizer:
             "summary_text": summary_text,
             "word_count": len(summary_text.split()),
             "key_takeaways": takeaways,
+            "citations": ["Full Document"],
+            "mode": "direct",
+            "source_words": word_count,
         }
 
 
