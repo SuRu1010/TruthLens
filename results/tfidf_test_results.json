@@ -1,0 +1,87 @@
+{
+  "accuracy": 0.6831,
+  "macro_f1": 0.4288,
+  "report": "               precision    recall  f1-score   support\n\nContradiction     0.5591    0.2118    0.3072       982\n      Neutral     0.5094    0.0985    0.1651       274\n   Entailment     0.7015    0.9696    0.8141      2174\n\n     accuracy                         0.6831      3430\n    macro avg     0.5900    0.4267    0.4288      3430\n weighted avg     0.6454    0.6831    0.6171      3430\n",
+  "confusion_matrix": [
+    [
+      208,
+      17,
+      757
+    ],
+    [
+      107,
+      27,
+      140
+    ],
+    [
+      57,
+      9,
+      2108
+    ]
+  ],
+  "num_samples": 3430,
+  "num_errors": 1087,
+  "sample_errors": [
+    {
+      "sentence": "the fbi has said it will help the san bernardino killer to access iphones used by the san bernardino victims.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.7598676740783769
+    },
+    {
+      "sentence": "the fbi has filed a lawsuit against the fbi over the killing of a man in the us state of pennsylvania.",
+      "gold": "Neutral",
+      "pred": "Entailment",
+      "confidence": 0.7168158225998319
+    },
+    {
+      "sentence": "the fbi has ordered the fbi to investigate the killing of a man accused of killing his wife and his wife.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.9196245500490787
+    },
+    {
+      "sentence": "a judge in arkansas has refused to apologise to the family of an american couple shot dead in the us.",
+      "gold": "Neutral",
+      "pred": "Entailment",
+      "confidence": 0.9432820884256348
+    },
+    {
+      "sentence": "sweden\\'s foreign minister johan gustsson has been freed after being kidnapped by islamist militants in mali.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.529673670807256
+    },
+    {
+      "sentence": "sweden\\'s foreign minister, mr swede, has been freed after being kidnapped by islamic state (is) militants in the capital, stockholm.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.6521672884615979
+    },
+    {
+      "sentence": "the french president, johan gustafsson gustafsson, has been released, after being released by the french military.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.5044656604346208
+    },
+    {
+      "sentence": "swedish foreign minister johan gusttrom has been freed after two suspected kidnappings in a raid in mali, his foreign ministry says.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.5915273789113316
+    },
+    {
+      "sentence": "golden state warriors beat golden state warriors 4-1 in the best-of-seven nba finals.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.7299876541755614
+    },
+    {
+      "sentence": "golden state warriors were beaten 7-0 by golden state warriors in the nba finals final.",
+      "gold": "Contradiction",
+      "pred": "Entailment",
+      "confidence": 0.6907309402631588
+    }
+  ],
+  "elapsed_seconds": 12.2
+}

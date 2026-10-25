@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+groq
+openai
+scikit-learn
+numpy
+tqdm
+pypdf
+PyMuPDF
+httpx
+python-docx
+python-multipart
+rank-bm25
